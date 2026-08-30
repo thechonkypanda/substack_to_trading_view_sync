@@ -1,7 +1,7 @@
 """Unit tests for reconciliation logic conforming to Spec 02 and acceptance criteria."""
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.models import (
     FormResponse,
@@ -90,6 +90,20 @@ class TestReconciliation(unittest.TestCase):
         self.assertEqual(diff.revokes[0].action_type, SyncActionType.REVOKE)
         self.assertEqual(diff.revokes[0].tradingview_username, "bob_tv")
 
+    def test_reconciliation_canceled_subscriber_no_tv_access_is_no_op(self):
+        """A user who canceled and NEVER had TV access produces no spurious revoke."""
+        subscribers = [
+            Subscriber(email="canceler@example.com", subscription_type="paid", status="canceled")
+        ]
+        form_responses = [
+            FormResponse.create_normalized(datetime.now(), "canceler@example.com", "canceler_tv")
+        ]
+        tv_users = []
+
+        diff = self.engine.calculate_diff(subscribers, form_responses, tv_users)
+        self.assertEqual(len(diff.grants), 0)
+        self.assertEqual(len(diff.revokes), 0)
+
     def test_reconciliation_unmatched_form_submission_rejected(self):
         """Free user or non-subscriber filling out form is classified as unmatched and gets no access."""
         subscribers = [
@@ -141,6 +155,58 @@ class TestReconciliation(unittest.TestCase):
         granted_handles = {g.tradingview_username for g in diff.grants}
         self.assertIn("vip_tv", granted_handles)
         self.assertIn("gifted_tv", granted_handles)
+
+    def test_complex_multi_user_batch_reconciliation(self):
+        """Tests a realistic batch containing active new members, active existing, canceled, and spam submissions."""
+        now = datetime.now()
+        subscribers = [
+            Subscriber(email="new_paid@domain.com", subscription_type="paid", status="active"),
+            Subscriber(email="existing_paid@domain.com", subscription_type="paid", status="active"),
+            Subscriber(email="canceled_user@domain.com", subscription_type="paid", status="canceled"),
+            Subscriber(email="unreg_paid@domain.com", subscription_type="founding", status="active"),
+            Subscriber(email="free_reader@domain.com", subscription_type="free", status="active"),
+        ]
+
+        form_responses = [
+            FormResponse.create_normalized(now - timedelta(hours=2), "new_paid@domain.com", "@NewTrader1"),
+            FormResponse.create_normalized(now - timedelta(hours=5), "existing_paid@domain.com", "ExistingTrader"),
+            FormResponse.create_normalized(now - timedelta(hours=1), "canceled_user@domain.com", "OldTrader"),
+            FormResponse.create_normalized(now - timedelta(minutes=10), "free_reader@domain.com", "FreebieGuy"),
+            FormResponse.create_normalized(now - timedelta(minutes=5), "spammer@random.com", "TrollAccount"),
+            # Duplicate submission attempt for new_paid@domain.com (should be ignored)
+            FormResponse.create_normalized(now, "new_paid@domain.com", "HijackerHandle"),
+        ]
+
+        tv_users = [
+            TradingViewUser(username="existingtrader", has_access=True),
+            TradingViewUser(username="oldtrader", has_access=True),
+        ]
+
+        diff = self.engine.calculate_diff(subscribers, form_responses, tv_users)
+
+        # 1. New paid should be granted access to NewTrader1 (not HijackerHandle)
+        self.assertEqual(len(diff.grants), 1)
+        self.assertEqual(diff.grants[0].tradingview_username, "NewTrader1")
+        self.assertEqual(diff.grants[0].email, "new_paid@domain.com")
+
+        # 2. Old trader should be revoked
+        self.assertEqual(len(diff.revokes), 1)
+        self.assertEqual(diff.revokes[0].tradingview_username, "oldtrader")
+
+        # 3. Existing trader should be a no-op
+        self.assertEqual(len(diff.no_ops), 1)
+        self.assertEqual(diff.no_ops[0].tradingview_username, "ExistingTrader")
+
+        # 4. Freebie, Canceled, and Spammer should be unmatched (not currently active paid)
+        self.assertEqual(len(diff.unmatched_form_submissions), 3)
+        unmatched_emails = {u.email for u in diff.unmatched_form_submissions}
+        self.assertIn("canceled_user@domain.com", unmatched_emails)
+        self.assertIn("free_reader@domain.com", unmatched_emails)
+        self.assertIn("spammer@random.com", unmatched_emails)
+
+        # 5. Unregistered paid subscriber should be tracked
+        self.assertEqual(len(diff.unregistered_paid_subscribers), 1)
+        self.assertEqual(diff.unregistered_paid_subscribers[0], "unreg_paid@domain.com")
 
 
 if __name__ == "__main__":
