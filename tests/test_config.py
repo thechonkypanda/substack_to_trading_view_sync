@@ -44,7 +44,6 @@ class TestConfig(unittest.TestCase):
             substack_session_cookie="",
             google_sheet_webapp_url="",
             tradingview_sessionid="",
-            tradingview_sessionid_sign=None,
             tradingview_script_id=""
         )
 

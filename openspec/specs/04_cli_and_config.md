@@ -19,7 +19,6 @@ GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=yo
 
 # TradingView Configuration
 TRADINGVIEW_SESSIONID=your_tradingview_sessionid
-TRADINGVIEW_SESSIONID_SIGN=your_tradingview_sessionid_sign
 TRADINGVIEW_SCRIPT_ID=PUB_xxxxxxxx
 ```
 

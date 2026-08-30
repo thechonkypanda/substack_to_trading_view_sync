@@ -10,8 +10,7 @@ This specification defines the contract for interacting with TradingView's invit
 TradingView's script access management is protected by session cookies:
 
 ### 2.1 Required Credentials
-- `TRADINGVIEW_SESSIONID`: The active `sessionid` cookie string from an authenticated browser session (stored in `.env` / environment variable).
-- `TRADINGVIEW_SESSIONID_SIGN`: The `sessionid_sign` cookie string (if present in modern TradingView sessions).
+- `TRADINGVIEW_SESSIONID`: The active `sessionid` cookie string from an authenticated browser session (stored in `.env`).
 - `TRADINGVIEW_SCRIPT_ID`: The unique identifier or published publication ID of the invite-only indicator (e.g. `PUB_xxxxxxxx`).
 
 ---

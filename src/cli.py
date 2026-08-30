@@ -152,7 +152,7 @@ def cmd_verify_auth(settings: Settings) -> int:
 
     # 3. Test TradingView
     try:
-        tv = TradingViewClient(settings.tradingview_sessionid, settings.tradingview_sessionid_sign, logger)
+        tv = TradingViewClient(sessionid=settings.tradingview_sessionid, logger=logger)
         tv.verify_auth()
         _print("[bold green]✔ TradingView Bridge:[/bold green] Authenticated with script ID [cyan]" + settings.tradingview_script_id + "[/cyan]")
     except TradingViewAuthError as e:
@@ -201,7 +201,7 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
         bridge = DryRunTradingViewBridge(logger=logger)
     else:
         _print("[bold red]LIVE EXECUTION MODE[/bold red]\nApplying verified grants and revokes to TradingView...\n")
-        bridge = TradingViewClient(settings.tradingview_sessionid, settings.tradingview_sessionid_sign, logger)
+        bridge = TradingViewClient(sessionid=settings.tradingview_sessionid, logger=logger)
 
     diff = run_reconciliation(settings, bridge)
     print_diff_report(diff)

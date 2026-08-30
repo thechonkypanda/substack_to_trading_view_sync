@@ -36,7 +36,6 @@ class Settings:
 
     # TradingView
     tradingview_sessionid: str
-    tradingview_sessionid_sign: Optional[str]
     tradingview_script_id: str
 
     @classmethod
@@ -49,7 +48,6 @@ class Settings:
             substack_session_cookie=os.getenv("SUBSTACK_SESSION_COOKIE", "").strip(),
             google_sheet_webapp_url=os.getenv("GOOGLE_SHEET_WEBAPP_URL", "").strip(),
             tradingview_sessionid=os.getenv("TRADINGVIEW_SESSIONID", "").strip(),
-            tradingview_sessionid_sign=os.getenv("TRADINGVIEW_SESSIONID_SIGN", "").strip() or None,
             tradingview_script_id=os.getenv("TRADINGVIEW_SCRIPT_ID", "").strip(),
         )
 
