@@ -104,7 +104,12 @@ Access will be granted within 72 hours of submission.
 
 ## 4. Automated Sync Configuration
 
-The sync engine automatically pulls paid subscribers from Substack and form submissions from Google Sheets.
+First, create your local `.env` file in the project root directory:
+```bash
+cp .env.example .env
+```
+
+The sync engine automatically pulls paid subscribers from Substack and form submissions from Google Sheets. Fill in the following credentials in your `.env` file:
 
 ### Step 1: Substack Session Cookie
 1. In your browser, log into your Substack publication dashboard (`https://yourpublication.substack.com/publish`).

@@ -37,7 +37,12 @@ Follow the step-by-step instructions in [docs/setup_guide.md](file:///Users/royn
 3. Update your Substack automated welcome email for new members.
 
 ### 2. Configuration (`.env`)
-Configure your credentials in `.env`:
+Create your local `.env` configuration file in the project root directory (the same folder as `.env.example`):
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your credentials:
 ```env
 SUBSTACK_SUBDOMAIN=yourpublication
 SUBSTACK_SESSION_COOKIE=s%3A...
