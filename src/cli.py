@@ -2,11 +2,11 @@
 
 import argparse
 import sys
+import traceback
 from typing import Optional
 
 try:
     from rich.console import Console
-    from rich.panel import Panel
     from rich.table import Table
     HAVE_RICH = True
     console = Console()
@@ -33,7 +33,6 @@ def _print(msg: str = "") -> None:
     if HAVE_RICH and console:
         console.print(msg)
     else:
-        # Strip simple rich tags if standard print
         clean = msg.replace("[bold green]", "").replace("[/bold green]", "")
         clean = clean.replace("[bold red]", "").replace("[/bold red]", "")
         clean = clean.replace("[bold cyan]", "").replace("[/bold cyan]", "")
@@ -120,7 +119,7 @@ def print_diff_report(diff: DiffPlan) -> None:
         _print()
 
 
-def cmd_verify_auth(settings: Settings) -> int:
+def cmd_verify_auth(settings: Settings, verbose: bool = False) -> int:
     """Verifies credentials and connections for all 3 services."""
     _print("[bold]Testing Connections to Substack, Google Sheets, and TradingView...[/bold]\n")
     logger = setup_logger()
@@ -132,10 +131,16 @@ def cmd_verify_auth(settings: Settings) -> int:
         substack.verify_connection()
         _print("[bold green]✔ Substack API:[/bold green] Connected to [cyan]" + settings.substack_subdomain + ".substack.com[/cyan]")
     except SubstackAuthError as e:
+        logger.exception("Substack auth verification failed.")
         _print(f"[bold red]✘ Substack API Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
     except Exception as e:
+        logger.exception("Unexpected error during Substack verification.")
         _print(f"[bold red]✘ Substack API Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
 
     # 2. Test Google Sheets
@@ -144,10 +149,16 @@ def cmd_verify_auth(settings: Settings) -> int:
         sheets.verify_connection()
         _print("[bold green]✔ Google Sheets API:[/bold green] Connected to Apps Script endpoint")
     except GoogleSheetsClientError as e:
+        logger.exception("Google Sheets verification failed.")
         _print(f"[bold red]✘ Google Sheets Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
     except Exception as e:
+        logger.exception("Unexpected error during Google Sheets verification.")
         _print(f"[bold red]✘ Google Sheets Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
 
     # 3. Test TradingView
@@ -156,10 +167,16 @@ def cmd_verify_auth(settings: Settings) -> int:
         tv.verify_auth()
         _print("[bold green]✔ TradingView Bridge:[/bold green] Authenticated with script ID [cyan]" + settings.tradingview_script_id + "[/cyan]")
     except TradingViewAuthError as e:
+        logger.exception("TradingView auth verification failed.")
         _print(f"[bold red]✘ TradingView Auth Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
     except Exception as e:
+        logger.exception("Unexpected error during TradingView verification.")
         _print(f"[bold red]✘ TradingView Error:[/bold red] {e}")
+        if verbose:
+            traceback.print_exc()
         all_ok = False
 
     return 0 if all_ok else 1
@@ -181,7 +198,7 @@ def run_reconciliation(settings: Settings, bridge: TradingViewBridge) -> DiffPla
     return engine.calculate_diff(subscribers, form_responses, tv_users)
 
 
-def cmd_diff(settings: Settings) -> int:
+def cmd_diff(settings: Settings, verbose: bool = False) -> int:
     """Calculates and previews the proposed diff plan."""
     logger = setup_logger()
     try:
@@ -194,17 +211,25 @@ def cmd_diff(settings: Settings) -> int:
     try:
         diff = run_reconciliation(settings, bridge)
     except (SubstackAuthError, TradingViewAuthError, GoogleSheetsClientError) as e:
-        _print(f"\n[bold red]✘ Authorization / Connection Error (Aborting):[/bold red]\n{e}\n")
+        logger.exception("Reconciliation failed due to authorization or connection error.")
+        _print(f"\n[bold red]✘ Authorization / Connection Error (Aborting):[/bold red]\n{e}")
+        _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+        if verbose:
+            traceback.print_exc()
         return 1
     except Exception as e:
-        _print(f"\n[bold red]✘ Unexpected Error:[/bold red] {e}\n")
+        logger.exception("Unexpected error during diff calculation.")
+        _print(f"\n[bold red]✘ Unexpected Error:[/bold red] {e}")
+        _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+        if verbose:
+            traceback.print_exc()
         return 1
 
     print_diff_report(diff)
     return 0
 
 
-def cmd_sync(settings: Settings, apply: bool) -> int:
+def cmd_sync(settings: Settings, apply: bool, verbose: bool = False) -> int:
     """Synchronizes permissions with TradingView with fail-fast protections."""
     logger = setup_logger()
     try:
@@ -225,19 +250,35 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
             bridge.verify_auth()
             _print("[bold green]✔ TradingView session verified.[/bold green]\n")
         except TradingViewAuthError as e:
-            _print(f"\n[bold red]✘ TradingView Session Expired (Aborting immediately before changes):[/bold red]\n{e}\n")
+            logger.exception("Pre-flight TradingView authentication check failed.")
+            _print(f"\n[bold red]✘ TradingView Session Expired (Aborting immediately before changes):[/bold red]\n{e}")
+            _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+            if verbose:
+                traceback.print_exc()
             return 1
         except Exception as e:
-            _print(f"\n[bold red]✘ Pre-flight Verification Failed:[/bold red] {e}\n")
+            logger.exception("Unexpected error during pre-flight check.")
+            _print(f"\n[bold red]✘ Pre-flight Verification Failed:[/bold red] {e}")
+            _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+            if verbose:
+                traceback.print_exc()
             return 1
 
     try:
         diff = run_reconciliation(settings, bridge)
     except (SubstackAuthError, TradingViewAuthError, GoogleSheetsClientError) as e:
-        _print(f"\n[bold red]✘ Data Ingestion Error (Aborting):[/bold red]\n{e}\n")
+        logger.exception("Data ingestion error during sync.")
+        _print(f"\n[bold red]✘ Data Ingestion Error (Aborting):[/bold red]\n{e}")
+        _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+        if verbose:
+            traceback.print_exc()
         return 1
     except Exception as e:
-        _print(f"\n[bold red]✘ Unexpected Error during reconciliation:[/bold red] {e}\n")
+        logger.exception("Unexpected error during reconciliation.")
+        _print(f"\n[bold red]✘ Unexpected Error during reconciliation:[/bold red] {e}")
+        _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+        if verbose:
+            traceback.print_exc()
         return 1
 
     print_diff_report(diff)
@@ -266,10 +307,18 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
 
             _print(f"\n[bold green]✔ Synchronization Complete! Applied {applied_grants} grants and {applied_revokes} revokes.[/bold green]\n")
         except TradingViewAuthError as e:
-            _print(f"\n[bold red]✘ TradingView Session Expired Mid-Sync (Halted immediately):[/bold red]\n{e}\n")
+            logger.exception("TradingView session expired mid-sync.")
+            _print(f"\n[bold red]✘ TradingView Session Expired Mid-Sync (Halted immediately):[/bold red]\n{e}")
+            _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+            if verbose:
+                traceback.print_exc()
             return 1
         except Exception as e:
-            _print(f"\n[bold red]✘ Error during sync application:[/bold red] {e}\n")
+            logger.exception("Unexpected error during sync execution.")
+            _print(f"\n[bold red]✘ Error during sync application:[/bold red] {e}")
+            _print("[dim](Detailed stack trace logged to logs/sync_errors.log)[/dim]\n")
+            if verbose:
+                traceback.print_exc()
             return 1
 
     return 0
@@ -278,6 +327,7 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
 def main() -> None:
     """Main CLI entrypoint."""
     parser = argparse.ArgumentParser(description="Substack to TradingView Sync CLI")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print full stack traces directly to the console")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
     # Command: verify-auth
@@ -299,11 +349,11 @@ def main() -> None:
     settings = Settings.load_from_env()
 
     if args.command == "verify-auth":
-        sys.exit(cmd_verify_auth(settings))
+        sys.exit(cmd_verify_auth(settings, verbose=args.verbose))
     elif args.command == "diff":
-        sys.exit(cmd_diff(settings))
+        sys.exit(cmd_diff(settings, verbose=args.verbose))
     elif args.command == "sync":
-        sys.exit(cmd_sync(settings, apply=args.apply))
+        sys.exit(cmd_sync(settings, apply=args.apply, verbose=args.verbose))
 
 
 if __name__ == "__main__":
