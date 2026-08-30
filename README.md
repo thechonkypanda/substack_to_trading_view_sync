@@ -53,12 +53,12 @@ TRADINGVIEW_SCRIPT_ID=PUB_xxxxxxxx
 
 ### 3. Running the Sync Engine
 ```bash
-# Verify credentials and service reachability
-python -m src.cli verify-auth
+# Preview proposed access changes (safe dry-run)
+python3 -m src.cli diff
 
-# Preview proposed access changes without modifying TradingView
-python -m src.cli diff
-
-# Apply access changes directly
-python -m src.cli sync --apply
+# Apply access changes directly to TradingView
+python3 -m src.cli sync --apply
 ```
+
+> [!TIP]
+> Both `diff` and `sync` automatically verify authentication and fail fast with clear instructions if any session cookie expires. You can also run `python3 -m src.cli verify-auth` anytime for standalone connection diagnostics.

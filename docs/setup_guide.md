@@ -161,13 +161,10 @@ Because your Google Sheet is strictly private and restricted, create a private W
 
 ### Step 4: Run the Sync Engine
 ```bash
-# Verify authentication
-python3 -m src.cli verify-auth
-
-# Preview proposed access changes
+# Preview proposed access changes (safe dry-run)
 python3 -m src.cli diff
 
-# Apply changes automatically
+# Apply changes automatically to TradingView
 python3 -m src.cli sync --apply
 ```
 
@@ -203,15 +200,13 @@ Because Substack and TradingView rely on browser session cookies rather than API
 
 ---
 
-### How to Check if Your Cookies are Valid (Takes 2 Seconds)
+### Automatic Session Verification
+You do not need to manually test your cookies before running a sync: **both `diff` and `sync --apply` automatically verify your session cookies and fail fast with clear instructions if any cookie has expired.**
 
-Before running a live sync, run:
+If you ever want to check your connections in isolation, you can optionally run:
 ```bash
 python3 -m src.cli verify-auth
 ```
-
-* **If valid**: You will see green checkmarks `✔ Substack API: Connected` and `✔ TradingView Bridge: Authenticated`.
-* **If expired**: The CLI will report `✘ Substack API Error (401)` or `✘ TradingView Auth Error (401)`.
 
 ### How to Refresh an Expired Cookie (Takes 10 Seconds)
 1. Open your browser and make sure you are logged into Substack or TradingView.
