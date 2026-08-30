@@ -20,7 +20,6 @@ def load_env_file(dotenv_path: Optional[str] = None) -> None:
             key, val = line.split("=", 1)
             key = key.strip()
             val = val.strip().strip("'\"")
-            # Only set if not already set in environment
             if key not in os.environ:
                 os.environ[key] = val
 
@@ -32,7 +31,8 @@ class Settings:
     substack_subdomain: str
     substack_session_cookie: str
 
-    # Google Sheets
+    # Google Sheets (Apps Script Web App or Sheet ID)
+    google_sheet_webapp_url: str
     google_sheet_id: str
     google_sheet_name: str
 
@@ -49,6 +49,7 @@ class Settings:
         return cls(
             substack_subdomain=os.getenv("SUBSTACK_SUBDOMAIN", "").strip(),
             substack_session_cookie=os.getenv("SUBSTACK_SESSION_COOKIE", "").strip(),
+            google_sheet_webapp_url=os.getenv("GOOGLE_SHEET_WEBAPP_URL", "").strip(),
             google_sheet_id=os.getenv("GOOGLE_SHEET_ID", "").strip(),
             google_sheet_name=os.getenv("GOOGLE_SHEET_NAME", "Form Responses 1").strip(),
             tradingview_sessionid=os.getenv("TRADINGVIEW_SESSIONID", "").strip(),
@@ -63,8 +64,8 @@ class Settings:
             missing.append("SUBSTACK_SUBDOMAIN")
         if not self.substack_session_cookie:
             missing.append("SUBSTACK_SESSION_COOKIE")
-        if not self.google_sheet_id:
-            missing.append("GOOGLE_SHEET_ID")
+        if not self.google_sheet_webapp_url and not self.google_sheet_id:
+            missing.append("GOOGLE_SHEET_WEBAPP_URL (or GOOGLE_SHEET_ID)")
         if not self.tradingview_sessionid:
             missing.append("TRADINGVIEW_SESSIONID")
         if not self.tradingview_script_id:

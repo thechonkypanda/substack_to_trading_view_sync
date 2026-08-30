@@ -29,6 +29,22 @@ class TestClients(unittest.TestCase):
         self.assertEqual(responses[1].email, "user2@example.com")
         self.assertEqual(responses[1].tradingview_username, "trader_two")
 
+    def test_google_sheets_apps_script_json_parser(self):
+        """Verifies that GoogleSheetsClient parses JSON 2D array from Apps Script."""
+        client = GoogleSheetsClient(webapp_url="https://script.google.com/dummy")
+        json_payload = [
+            ["Timestamp", "Substack Email Address", "TradingView Username"],
+            ["2026-08-01 10:00:00", "user1@example.com", "TraderOne"],
+            ["2026-08-02 12:30:00", "user2@example.com", "@trader_two"]
+        ]
+
+        responses = client.parse_json_rows(json_payload)
+        self.assertEqual(len(responses), 2)
+        self.assertEqual(responses[0].email, "user1@example.com")
+        self.assertEqual(responses[0].tradingview_username, "TraderOne")
+        self.assertEqual(responses[1].email, "user2@example.com")
+        self.assertEqual(responses[1].tradingview_username, "trader_two")
+
     def test_google_sheets_csv_parser_missing_headers(self):
         """Verifies that missing columns raise a GoogleSheetsClientError."""
         client = GoogleSheetsClient(sheet_id="dummy")

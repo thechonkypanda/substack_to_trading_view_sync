@@ -127,24 +127,43 @@ The sync engine automatically pulls paid subscribers from Substack and form subm
    TRADINGVIEW_SCRIPT_ID=PUB_xxxxxxxx
    ```
 
-### Step 3: Google Sheets ID
-1. Open your linked response Google Sheet.
-2. Copy the spreadsheet ID from the URL (`https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`).
-3. Set in `.env`:
+### Step 3: Google Sheets Secure Web App Endpoint (Takes 60 Seconds)
+Because your Google Sheet is strictly private and restricted, create a private Web App endpoint with a secret passphrase:
+
+1. Open your linked Google Sheet.
+2. In the top menu, click **Extensions $\rightarrow$ Apps Script**.
+3. Replace any code in the editor with this 7-line snippet:
+   ```javascript
+   function doGet(e) {
+     var secret = e.parameter.key;
+     if (secret !== "YOUR_SECRET_PASSPHRASE") {
+       return ContentService.createTextOutput("Unauthorized").setMimeType(ContentService.MimeType.TEXT);
+     }
+     var data = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getDataRange().getValues();
+     return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+   }
+   ```
+4. Replace `"YOUR_SECRET_PASSPHRASE"` with any random secret string (e.g. `tv_sync_pass_987654`).
+5. Click **Deploy (top right) $\rightarrow$ New Deployment**:
+   - Select type: **Web app** (click the gear icon $\rightarrow$ Web app).
+   - **Execute as**: `Me (<your_email>)`.
+   - **Who has access**: `Anyone`. *(Note: Your sheet remains 100% private; only requests with your secret passphrase can retrieve the data).*
+   - Click **Deploy** and authorize access.
+6. Copy the **Web App URL** and add your secret key:
    ```env
-   GOOGLE_SHEET_ID=your_google_sheet_id
+   GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=YOUR_SECRET_PASSPHRASE
    ```
 
 ### Step 4: Run the Sync Engine
 ```bash
 # Verify authentication
-python -m src.cli verify-auth
+python3 -m src.cli verify-auth
 
 # Preview proposed access changes
-python -m src.cli diff
+python3 -m src.cli diff
 
 # Apply changes automatically
-python -m src.cli sync --apply
+python3 -m src.cli sync --apply
 ```
 
 ---
