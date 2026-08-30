@@ -13,7 +13,7 @@ class TestClients(unittest.TestCase):
 
     def test_google_sheets_csv_parser_normal(self):
         """Verifies that GoogleSheetsClient correctly parses CSV content."""
-        client = GoogleSheetsClient(sheet_id="dummy")
+        client = GoogleSheetsClient(webapp_url="https://script.google.com/dummy")
         csv_sample = (
             "Timestamp,Substack Email Address,TradingView Username\n"
             "2026-08-01 10:00:00, user1@example.com , @TraderOne \n"
@@ -47,7 +47,7 @@ class TestClients(unittest.TestCase):
 
     def test_google_sheets_csv_parser_missing_headers(self):
         """Verifies that missing columns raise a GoogleSheetsClientError."""
-        client = GoogleSheetsClient(sheet_id="dummy")
+        client = GoogleSheetsClient(webapp_url="https://script.google.com/dummy")
         invalid_csv = "RandomCol1,RandomCol2\nval1,val2\n"
 
         with self.assertRaises(GoogleSheetsClientError):

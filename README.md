@@ -41,7 +41,7 @@ Configure your credentials in `.env`:
 ```env
 SUBSTACK_SUBDOMAIN=yourpublication
 SUBSTACK_SESSION_COOKIE=s%3A...
-GOOGLE_SHEET_ID=your_google_sheet_id
+GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=your_secret_key
 TRADINGVIEW_SESSIONID=your_tradingview_sessionid
 TRADINGVIEW_SCRIPT_ID=PUB_xxxxxxxx
 ```

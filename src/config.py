@@ -31,10 +31,8 @@ class Settings:
     substack_subdomain: str
     substack_session_cookie: str
 
-    # Google Sheets (Apps Script Web App or Sheet ID)
+    # Google Sheets (Secure Apps Script Web App Endpoint)
     google_sheet_webapp_url: str
-    google_sheet_id: str
-    google_sheet_name: str
 
     # TradingView
     tradingview_sessionid: str
@@ -50,8 +48,6 @@ class Settings:
             substack_subdomain=os.getenv("SUBSTACK_SUBDOMAIN", "").strip(),
             substack_session_cookie=os.getenv("SUBSTACK_SESSION_COOKIE", "").strip(),
             google_sheet_webapp_url=os.getenv("GOOGLE_SHEET_WEBAPP_URL", "").strip(),
-            google_sheet_id=os.getenv("GOOGLE_SHEET_ID", "").strip(),
-            google_sheet_name=os.getenv("GOOGLE_SHEET_NAME", "Form Responses 1").strip(),
             tradingview_sessionid=os.getenv("TRADINGVIEW_SESSIONID", "").strip(),
             tradingview_sessionid_sign=os.getenv("TRADINGVIEW_SESSIONID_SIGN", "").strip() or None,
             tradingview_script_id=os.getenv("TRADINGVIEW_SCRIPT_ID", "").strip(),
@@ -64,8 +60,8 @@ class Settings:
             missing.append("SUBSTACK_SUBDOMAIN")
         if not self.substack_session_cookie:
             missing.append("SUBSTACK_SESSION_COOKIE")
-        if not self.google_sheet_webapp_url and not self.google_sheet_id:
-            missing.append("GOOGLE_SHEET_WEBAPP_URL (or GOOGLE_SHEET_ID)")
+        if not self.google_sheet_webapp_url:
+            missing.append("GOOGLE_SHEET_WEBAPP_URL")
         if not self.tradingview_sessionid:
             missing.append("TRADINGVIEW_SESSIONID")
         if not self.tradingview_script_id:

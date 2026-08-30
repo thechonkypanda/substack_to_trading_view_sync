@@ -140,15 +140,9 @@ def cmd_verify_auth(settings: Settings) -> int:
 
     # 2. Test Google Sheets
     try:
-        sheets = GoogleSheetsClient(
-            webapp_url=settings.google_sheet_webapp_url,
-            sheet_id=settings.google_sheet_id,
-            sheet_name=settings.google_sheet_name,
-            logger=logger
-        )
+        sheets = GoogleSheetsClient(webapp_url=settings.google_sheet_webapp_url, logger=logger)
         sheets.verify_connection()
-        target_display = settings.google_sheet_webapp_url or settings.google_sheet_id
-        _print("[bold green]✔ Google Sheets API:[/bold green] Connected to [cyan]" + target_display + "[/cyan]")
+        _print("[bold green]✔ Google Sheets API:[/bold green] Connected to Apps Script endpoint")
     except GoogleSheetsClientError as e:
         _print(f"[bold red]✘ Google Sheets Error:[/bold red] {e}")
         all_ok = False
@@ -178,12 +172,7 @@ def run_reconciliation(settings: Settings, bridge: TradingViewBridge) -> DiffPla
     substack = SubstackClient(settings.substack_subdomain, settings.substack_session_cookie, logger)
     subscribers = substack.fetch_all_subscribers()
 
-    sheets = GoogleSheetsClient(
-        webapp_url=settings.google_sheet_webapp_url,
-        sheet_id=settings.google_sheet_id,
-        sheet_name=settings.google_sheet_name,
-        logger=logger
-    )
+    sheets = GoogleSheetsClient(webapp_url=settings.google_sheet_webapp_url, logger=logger)
     form_responses = sheets.fetch_form_responses()
 
     tv_users = bridge.get_authorized_users(settings.tradingview_script_id)

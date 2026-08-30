@@ -14,9 +14,8 @@ Configuration is loaded from a `.env` file or environment variables:
 SUBSTACK_SUBDOMAIN=yourpublication
 SUBSTACK_SESSION_COOKIE=s%3Ayoursecretcookie...
 
-# Google Sheets Configuration
-GOOGLE_SHEET_ID=your_google_sheet_id
-GOOGLE_SERVICE_ACCOUNT_PATH=./credentials/google_service_account.json
+# Google Sheets Secure Apps Script Web App
+GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=your_secret_passphrase
 
 # TradingView Configuration
 TRADINGVIEW_SESSIONID=your_tradingview_sessionid

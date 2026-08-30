@@ -19,32 +19,22 @@ class GoogleSheetsClientError(Exception):
 
 
 class GoogleSheetsClient:
-    """Client for querying Google Sheets containing form responses via secure Apps Script Web App or CSV endpoint."""
+    """Client for querying Google Sheets containing form responses via secure Apps Script Web App."""
 
     def __init__(
         self,
-        webapp_url: Optional[str] = None,
-        sheet_id: Optional[str] = None,
-        sheet_name: str = "Form Responses 1",
+        webapp_url: str,
         logger: Optional[logging.Logger] = None
     ) -> None:
         self.webapp_url = (webapp_url or "").strip()
-        self.sheet_id = (sheet_id or "").strip()
-        self.sheet_name = sheet_name.strip()
         self.logger = logger or logging.getLogger("substack_tv_sync")
-
-    def _get_target_url(self) -> str:
-        """Returns the configured Web App URL or direct export URL."""
-        if self.webapp_url:
-            return self.webapp_url
-        if self.sheet_id:
-            return f"https://docs.google.com/spreadsheets/d/{self.sheet_id}/gviz/tq?tqx=out:csv&sheet={self.sheet_name}"
-        raise GoogleSheetsClientError("Neither GOOGLE_SHEET_WEBAPP_URL nor GOOGLE_SHEET_ID is configured in .env.")
 
     def verify_connection(self) -> bool:
         """Verifies that the Google Sheets endpoint is reachable and authorized."""
-        url = self._get_target_url()
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
+        if not self.webapp_url:
+            raise GoogleSheetsClientError("GOOGLE_SHEET_WEBAPP_URL is not configured in .env.")
+
+        req = urllib.request.Request(self.webapp_url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 if resp.status == 200:
@@ -52,10 +42,10 @@ class GoogleSheetsClient:
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
                 raise GoogleSheetsClientError(
-                    f"Google Sheets access denied (HTTP {e.code}). Check your Apps Script key or permissions."
+                    f"Google Sheets access denied (HTTP {e.code}). Check your Apps Script key."
                 )
             if e.code == 404:
-                raise GoogleSheetsClientError(f"Google Sheet endpoint not found (HTTP 404).")
+                raise GoogleSheetsClientError("Google Sheet endpoint not found (HTTP 404).")
             raise GoogleSheetsClientError(f"Google Sheet HTTP Error {e.code}: {e.reason}")
         except Exception as e:
             raise GoogleSheetsClientError(f"Failed to connect to Google Sheet endpoint: {e}")
@@ -63,9 +53,11 @@ class GoogleSheetsClient:
         return True
 
     def fetch_form_responses(self) -> List[FormResponse]:
-        """Fetches and parses form responses from the configured Google Sheet endpoint."""
-        url = self._get_target_url()
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
+        """Fetches and parses form responses from the configured Apps Script endpoint."""
+        if not self.webapp_url:
+            raise GoogleSheetsClientError("GOOGLE_SHEET_WEBAPP_URL is not configured in .env.")
+
+        req = urllib.request.Request(self.webapp_url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 raw_text = resp.read().decode("utf-8")
@@ -76,7 +68,7 @@ class GoogleSheetsClient:
             self.logger.error(f"Google Sheets fetch failed: {e}")
             raise GoogleSheetsClientError(f"Failed to download Google Sheet data: {e}")
 
-        # Determine if response is JSON (from Apps Script) or CSV
+        # Handle JSON response from Apps Script or CSV fallback
         raw_text_stripped = raw_text.strip()
         if raw_text_stripped.startswith("[") or raw_text_stripped.startswith("{"):
             try:
