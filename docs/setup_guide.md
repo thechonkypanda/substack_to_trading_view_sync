@@ -184,6 +184,37 @@ Google Forms automatically records an auto-generated **Timestamp** in Column A f
    - **If the email appears in multiple rows** (from past duplicate submissions): Update the **top-most row (earliest Timestamp)**, or simply delete the extra duplicate rows below it.
 4. Run the sync command:
    ```bash
-   python -m src.cli sync --apply
+   python3 -m src.cli sync --apply
    ```
    *The sync engine will detect your update in the Sheet, automatically revoke access from their old TradingView username, and grant access to their new username.*
+
+---
+
+## 6. Session Cookie Lifespans & Expiration Guide
+
+Because Substack and TradingView rely on browser session cookies rather than API tokens, here is what you need to know about cookie lifespans:
+
+### Lifespan Summary
+
+| Service | Cookie Name | Typical Lifespan | When Does It Expire? |
+| :--- | :--- | :--- | :--- |
+| **Substack** | `substack.sid` | **30 to 90 days** | • Explicitly logging out of Substack<br>• Changing Substack password<br>• Clearing browser cookies<br>• Standard 30–90 day security rotation |
+| **TradingView** | `sessionid` | **30 to 60 days** | • Explicitly signing out of TradingView<br>• Changing TradingView password<br>• Clearing browser cookies<br>• Standard 30–60 day security rotation |
+
+---
+
+### How to Check if Your Cookies are Valid (Takes 2 Seconds)
+
+Before running a live sync, run:
+```bash
+python3 -m src.cli verify-auth
+```
+
+* **If valid**: You will see green checkmarks `✔ Substack API: Connected` and `✔ TradingView Bridge: Authenticated`.
+* **If expired**: The CLI will report `✘ Substack API Error (401)` or `✘ TradingView Auth Error (401)`.
+
+### How to Refresh an Expired Cookie (Takes 10 Seconds)
+1. Open your browser and make sure you are logged into Substack or TradingView.
+2. Open Developer Tools (**Cmd + Option + I** on Mac, or **F12** on Windows/Linux) $\rightarrow$ **Application / Storage** $\rightarrow$ **Cookies**.
+3. Copy the fresh cookie value.
+4. Paste it into your local `.env` file and save. That's it!
