@@ -184,17 +184,34 @@ def run_reconciliation(settings: Settings, bridge: TradingViewBridge) -> DiffPla
 def cmd_diff(settings: Settings) -> int:
     """Calculates and previews the proposed diff plan."""
     logger = setup_logger()
-    settings.validate_for_sync()
+    try:
+        settings.validate_for_sync()
+    except ValueError as e:
+        _print(f"[bold red]✘ Configuration Error:[/bold red] {e}")
+        return 1
+
     bridge = DryRunTradingViewBridge(logger=logger)
-    diff = run_reconciliation(settings, bridge)
+    try:
+        diff = run_reconciliation(settings, bridge)
+    except (SubstackAuthError, TradingViewAuthError, GoogleSheetsClientError) as e:
+        _print(f"\n[bold red]✘ Authorization / Connection Error (Aborting):[/bold red]\n{e}\n")
+        return 1
+    except Exception as e:
+        _print(f"\n[bold red]✘ Unexpected Error:[/bold red] {e}\n")
+        return 1
+
     print_diff_report(diff)
     return 0
 
 
 def cmd_sync(settings: Settings, apply: bool) -> int:
-    """Synchronizes permissions with TradingView."""
+    """Synchronizes permissions with TradingView with fail-fast protections."""
     logger = setup_logger()
-    settings.validate_for_sync()
+    try:
+        settings.validate_for_sync()
+    except ValueError as e:
+        _print(f"[bold red]✘ Configuration Error:[/bold red] {e}")
+        return 1
 
     if not apply:
         _print("[bold yellow]DRY-RUN MODE (Simulation)[/bold yellow]\nPass [bold]--apply[/bold] to write live changes to TradingView.\n")
@@ -202,8 +219,27 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
     else:
         _print("[bold red]LIVE EXECUTION MODE[/bold red]\nApplying verified grants and revokes to TradingView...\n")
         bridge = TradingViewClient(sessionid=settings.tradingview_sessionid, logger=logger)
+        # Pre-flight check: fail fast before touching anything
+        try:
+            _print("Checking TradingView session validity...")
+            bridge.verify_auth()
+            _print("[bold green]✔ TradingView session verified.[/bold green]\n")
+        except TradingViewAuthError as e:
+            _print(f"\n[bold red]✘ TradingView Session Expired (Aborting immediately before changes):[/bold red]\n{e}\n")
+            return 1
+        except Exception as e:
+            _print(f"\n[bold red]✘ Pre-flight Verification Failed:[/bold red] {e}\n")
+            return 1
 
-    diff = run_reconciliation(settings, bridge)
+    try:
+        diff = run_reconciliation(settings, bridge)
+    except (SubstackAuthError, TradingViewAuthError, GoogleSheetsClientError) as e:
+        _print(f"\n[bold red]✘ Data Ingestion Error (Aborting):[/bold red]\n{e}\n")
+        return 1
+    except Exception as e:
+        _print(f"\n[bold red]✘ Unexpected Error during reconciliation:[/bold red] {e}\n")
+        return 1
+
     print_diff_report(diff)
 
     if not diff.has_changes:
@@ -211,17 +247,30 @@ def cmd_sync(settings: Settings, apply: bool) -> int:
         return 0
 
     if apply:
-        # Apply Grants
-        for grant in diff.grants:
-            _print(f"Granting access to [bold green]{grant.tradingview_username}[/bold green]...")
-            bridge.grant_access(settings.tradingview_script_id, grant.tradingview_username)
+        applied_grants = 0
+        applied_revokes = 0
+        try:
+            # Apply Grants
+            for grant in diff.grants:
+                _print(f"Granting access to [bold green]{grant.tradingview_username}[/bold green]...")
+                success = bridge.grant_access(settings.tradingview_script_id, grant.tradingview_username)
+                if success:
+                    applied_grants += 1
 
-        # Apply Revokes
-        for revoke in diff.revokes:
-            _print(f"Revoking access from [bold red]{revoke.tradingview_username}[/bold red]...")
-            bridge.revoke_access(settings.tradingview_script_id, revoke.tradingview_username)
+            # Apply Revokes
+            for revoke in diff.revokes:
+                _print(f"Revoking access from [bold red]{revoke.tradingview_username}[/bold red]...")
+                success = bridge.revoke_access(settings.tradingview_script_id, revoke.tradingview_username)
+                if success:
+                    applied_revokes += 1
 
-        _print("\n[bold green]✔ Synchronization Complete![/bold green]\n")
+            _print(f"\n[bold green]✔ Synchronization Complete! Applied {applied_grants} grants and {applied_revokes} revokes.[/bold green]\n")
+        except TradingViewAuthError as e:
+            _print(f"\n[bold red]✘ TradingView Session Expired Mid-Sync (Halted immediately):[/bold red]\n{e}\n")
+            return 1
+        except Exception as e:
+            _print(f"\n[bold red]✘ Error during sync application:[/bold red] {e}\n")
+            return 1
 
     return 0
 

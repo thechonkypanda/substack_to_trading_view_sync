@@ -133,6 +133,30 @@ class TestClients(unittest.TestCase):
                 self.assertTrue(success)
                 mock_sleep.assert_called_once_with(0.5)
 
+    def test_tradingview_client_fail_fast_on_401(self):
+        """Verifies that TradingViewClient raises TradingViewAuthError immediately without retrying on 401."""
+        from unittest.mock import patch
+        import urllib.error
+        from src.clients.tradingview_client import TradingViewClient, TradingViewAuthError
+
+        client = TradingViewClient(sessionid="expired_session")
+
+        # Simulate 401 HTTP error
+        http_401 = urllib.error.HTTPError(
+            url="https://www.tradingview.com/pine_perm/add_user/",
+            code=401,
+            msg="Unauthorized",
+            hdrs={},
+            fp=None
+        )
+
+        with patch("urllib.request.urlopen", side_effect=http_401) as mock_urlopen:
+            with self.assertRaises(TradingViewAuthError):
+                client.grant_access("PUB_123", "testuser")
+            
+            # Verify it failed fast on the first call (urlopen called exactly once, 0 retries)
+            self.assertEqual(mock_urlopen.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

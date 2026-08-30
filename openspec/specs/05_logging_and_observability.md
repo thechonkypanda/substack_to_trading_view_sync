@@ -24,15 +24,17 @@ This specification defines the error handling, structured logging, and observabi
 
 ## 3. Error Categories & Handling Rules
 
-### 3.1 Authentication & Session Expiration (`AUTH_EXPIRED`)
+### 3.1 Authentication & Session Expiration (`AUTH_EXPIRED` - Fail-Fast Policy)
 * **Triggers**: Substack or TradingView returns HTTP `401 Unauthorized` or `403 Forbidden`.
-* **Behavior**:
-  1. Abort the current batch safely without corrupting state.
-  2. Write an `ERROR` entry to `logs/sync_errors.log` and console.
-  3. Output a clear user prompt:
+* **Behavior (Strict Fail-Fast)**:
+  1. **Zero Retries for Auth Errors**: Unlike network glitches or rate limits (429), session expiration (401/403) must **never retry**. The client aborts immediately on the very first 401 response.
+  2. **Pre-Flight Check**: Live execution (`sync --apply`) performs a lightweight pre-flight authentication verification before modifying any users.
+  3. **Immediate Loop Halting**: If a session expires mid-sync while iterating over grants/revokes, execution halts instantly to avoid spamming the API with failed requests.
+  4. Write an `ERROR` entry to `logs/sync_errors.log` and console with actionable remediation instructions.
+  5. Output clean remediation guidance:
      ```text
-     ❌ [ERROR] Authentication Failed: Substack session cookie is no longer valid.
-     👉 Solution: Log into Substack in your browser, copy a fresh 'substack.sid' cookie, and update .env.
+     ❌ [ERROR] Authentication Failed: Session cookie expired (HTTP 401).
+     👉 Solution: Refresh your session cookie in your browser and update .env.
      ```
 
 ---
