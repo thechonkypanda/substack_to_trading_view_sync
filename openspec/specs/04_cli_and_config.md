@@ -15,7 +15,7 @@ SUBSTACK_SUBDOMAIN=yourpublication
 SUBSTACK_SESSION_COOKIE=s%3Ayoursecretcookie...
 
 # Google Sheets Secure Apps Script Web App
-GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=your_secret_passphrase
+GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?key=YOUR_SECRET_PASSPHRASE
 
 # TradingView Configuration
 TRADINGVIEW_SESSIONID=your_tradingview_sessionid

@@ -151,7 +151,7 @@ Because your Google Sheet is strictly private and restricted, create a private W
    - Click **Deploy** and authorize access.
 6. Copy the **Web App URL** and add your secret key:
    ```env
-   GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/AKfycb.../exec?key=YOUR_SECRET_PASSPHRASE
+   GOOGLE_SHEET_WEBAPP_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?key=YOUR_SECRET_PASSPHRASE
    ```
 
 ### Step 4: Run the Sync Engine
