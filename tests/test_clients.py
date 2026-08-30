@@ -111,6 +111,28 @@ class TestClients(unittest.TestCase):
         self.assertEqual(len(final_users), 1)
         self.assertEqual(final_users[0].username, "new_user")
 
+    def test_tradingview_client_pacing_configuration(self):
+        """Verifies that TradingViewClient properly configures and executes pacing delay."""
+        from unittest.mock import patch, MagicMock
+        from src.clients.tradingview_client import TradingViewClient
+
+        client = TradingViewClient(sessionid="test_session", request_delay=0.5)
+        self.assertEqual(client.request_delay, 0.5)
+
+        # Mock _request_with_retry to simulate successful grant
+        with patch.object(client, "_request_with_retry", return_value={"status": "ok"}):
+            with patch("time.sleep") as mock_sleep:
+                success = client.grant_access("PUB_123", "testuser")
+                self.assertTrue(success)
+                mock_sleep.assert_called_once_with(0.5)
+
+        # Mock _request_with_retry to simulate successful revoke
+        with patch.object(client, "_request_with_retry", return_value={"status": "ok"}):
+            with patch("time.sleep") as mock_sleep:
+                success = client.revoke_access("PUB_123", "testuser")
+                self.assertTrue(success)
+                mock_sleep.assert_called_once_with(0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -78,10 +78,12 @@ class TradingViewClient(TradingViewBridge):
         self,
         sessionid: str,
         sessionid_sign: Optional[str] = None,
+        request_delay: float = 0.5,
         logger: Optional[logging.Logger] = None
     ) -> None:
         self.sessionid = sessionid.strip()
         self.sessionid_sign = (sessionid_sign or "").strip()
+        self.request_delay = request_delay
         self.logger = logger or logging.getLogger("substack_tv_sync")
         self.base_url = "https://www.tradingview.com"
         
@@ -198,7 +200,7 @@ class TradingViewClient(TradingViewBridge):
         return users_list
 
     def grant_access(self, script_id: str, username: str, expiration: Optional[str] = None) -> bool:
-        """Grants invite-only access to a username on TradingView."""
+        """Grants invite-only access to a username on TradingView with pacing delay."""
         url = f"{self.base_url}/pine_perm/add_user/"
         data = {
             "pine_id": script_id,
@@ -211,6 +213,8 @@ class TradingViewClient(TradingViewBridge):
             payload = self._request_with_retry(url, data=data)
             if payload.get("status") == "ok":
                 self.logger.info(f"Successfully GRANTED TradingView access to '{username}' for script {script_id}")
+                if self.request_delay > 0:
+                    time.sleep(self.request_delay)
                 return True
             else:
                 self.logger.error(f"Failed to grant access to '{username}': {payload}")
@@ -220,7 +224,7 @@ class TradingViewClient(TradingViewBridge):
             raise
 
     def revoke_access(self, script_id: str, username: str) -> bool:
-        """Revokes invite-only access from a username on TradingView."""
+        """Revokes invite-only access from a username on TradingView with pacing delay."""
         url = f"{self.base_url}/pine_perm/remove_user/"
         data = {
             "pine_id": script_id,
@@ -231,6 +235,8 @@ class TradingViewClient(TradingViewBridge):
             payload = self._request_with_retry(url, data=data)
             if payload.get("status") == "ok":
                 self.logger.info(f"Successfully REVOKED TradingView access from '{username}' for script {script_id}")
+                if self.request_delay > 0:
+                    time.sleep(self.request_delay)
                 return True
             else:
                 self.logger.error(f"Failed to revoke access from '{username}': {payload}")

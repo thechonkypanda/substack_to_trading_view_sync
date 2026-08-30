@@ -66,3 +66,17 @@ TradingView's script access management is protected by session cookies:
    - Executes real HTTP requests against TradingView endpoints using valid session cookies.
 3. **`MockBridge` (Testing)**:
    - In-memory mock for automated unit and integration tests.
+
+---
+
+## 5. Rate Limiting, Pacing, and Throttling
+
+To ensure safe operation at scale (e.g. 1,000 to 10,000+ subscribers) and prevent triggering TradingView/Cloudflare burst blocks:
+
+1. **Pacing Delay (`request_delay`)**:
+   - The bridge introduces a minimum 0.5-second pacing delay between consecutive `grant_access` or `revoke_access` requests.
+   - Pacing is configurable (`request_delay: float = 0.5`) and can be set to `0.0` in unit tests for instant test runs.
+2. **HTTP 429 Automatic Exponential Backoff**:
+   - If TradingView returns `HTTP 429 Too Many Requests`, the client automatically pauses and retries with progressive backoff (1.0s $\rightarrow$ 2.0s $\rightarrow$ 4.0s).
+3. **Incremental Diff Execution**:
+   - The reconciliation engine only calls TradingView for the net difference (`grants` and `revokes`). Already authorized members produce `NO_OP` with zero network requests.
